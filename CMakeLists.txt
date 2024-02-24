@@ -40,6 +40,8 @@ find_package(casadi REQUIRED)
 
 # Find the savitzky golay filter package and all its dependencies 
 find_package(gram_savitzky_golay REQUIRED)
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 catkin_package()
 
@@ -66,6 +68,13 @@ add_library(vilo_lib
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
     src/factor/imu_leg_factor.cpp src/factor/imu_leg_factor.h src/factor/imu_leg_integration_base.cpp src/factor/imu_leg_integration_base.h
+
+    src/riekf/InEKF.cpp
+    src/riekf/LieGroup.cpp
+    src/riekf/NoiseParams.cpp
+    src/riekf/RobotState.cpp
+    src/estimator/modern_robotics.cpp
+    src/estimator/EstiRIEKF.cpp
 )
 
 
@@ -75,7 +84,7 @@ add_subdirectory(src/kalmanFilter)
 target_link_libraries(vilo_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES})
 
 add_executable(vilo src/main.cpp )
-target_link_libraries(vilo 
+target_link_libraries(vilo
     vilo_lib
     kf_lib
     casadi

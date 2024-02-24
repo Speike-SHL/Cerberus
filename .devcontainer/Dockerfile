@@ -31,6 +31,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     ros-${ROS_DISTRO}-image-transport \
     ros-${ROS_DISTRO}-message-filters \
     ros-${ROS_DISTRO}-tf \
+    ros-${ROS_DISTRO}-grid-map-rviz-plugin \
     zsh \
     clang-format-10 && \
     rm -rf /var/lib/apt/lists/*

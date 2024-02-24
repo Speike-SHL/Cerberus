@@ -10,6 +10,9 @@ Estimator::Estimator() : f_manager{Rs}
     ROS_INFO("init begins");
     initThreadFlag = false;
     clearState();
+    _riekf = new EstiRIEKF(this);
+    cout << "Estimator 类中 _riekf 地址 : " << _riekf << endl;
+    cout << "Estimator 类中   this 地址 : " << this << endl;
 }
 
 Estimator::~Estimator()
@@ -397,11 +400,11 @@ bool Estimator::getIMUAndLegInterval(double t0, double t1,
 }
 
 // in MULTIPLE_THREAD mode, this function will be called periodically
+// 在void Estimator::setParameter()函数中被调用
 void Estimator::processMeasurements()
 {
     while (true)
     {
-        //        printf("process measurments\n");
         pair<double, map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>>> feature;
         vector<pair<double, Eigen::Vector3d>> accVector, gyrVector;
 
@@ -420,7 +423,7 @@ void Estimator::processMeasurements()
                     break;
                 else
                 {
-                    printf("wait for imu and leg ... \n");
+                    // printf("wait for imu and leg ... \n");   // NOTE 注释输出
                     if (!MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -434,14 +437,38 @@ void Estimator::processMeasurements()
             // TODO: get leg info and IMU together
             if (USE_LEG && USE_IMU)
             {
+                // 从缓冲区内获取指定时间间隔的IMU和腿部数据
                 getIMUAndLegInterval(prevTime, curTime, accVector, gyrVector, jointAngVector, jointVelVector, contactFlagVector);
             }
             else if (USE_IMU)
+            {
                 getIMUInterval(prevTime, curTime, accVector, gyrVector);
+            }
 
             // remove feature buf
             featureBuf.pop();
             mBuf.unlock();
+
+            // 打印从缓冲区读出的所有数据
+            // cout << "=================================================================" << endl;
+            // cout << "prevTime: " << prevTime << endl;
+            // cout << "curTime: " << curTime << endl;
+            // cout << " accVector size " << accVector.size()
+            //      << " gyrVector size " << gyrVector.size()
+            //      << " jointAngVector size " << jointAngVector.size()
+            //      << " jointVelVector size " << jointVelVector.size()
+            //      << " contactFlagVector size " << contactFlagVector.size();
+            // for (const auto &item : accVector)
+            //     cout << "accVector " << item.first << " " << item.second.transpose() << endl;
+            // for (const auto &item : gyrVector)
+            //     cout << "gyrVector " << item.first << " " << item.second.transpose() << endl;
+            // for (const auto &item : jointAngVector)
+            //     cout << "jointAngVector " << item.first << " " << item.second.transpose() << endl;
+            // for (const auto &item : jointVelVector)
+            //     cout << "jointVelVector " << item.first << " " << item.second.transpose() << endl;
+            // for (const auto &item : contactFlagVector)
+            //     cout << "contactFlagVector " << item.first << " " << item.second.transpose() << endl;
+            // cout << "=================================================================" << endl;
 
             Vector3d tmpPs;
             Vector3d tmpPs2;
@@ -450,6 +477,7 @@ void Estimator::processMeasurements()
 
             if (USE_LEG && USE_IMU)
             {
+                cout << "USE_LEG & USE_IMU" << endl;
                 // average acc to get initial Rs[0]
                 if (!initFirstPoseFlag)
                     initFirstIMUPose(accVector);
@@ -469,7 +497,7 @@ void Estimator::processMeasurements()
 
                 /* many debug print goes here */
             }
-            else if (USE_IMU)
+            else if (USE_IMU)   //没有进这里
             {
                 // average acc to get initial Rs[0]
                 if (!initFirstPoseFlag)
@@ -503,7 +531,6 @@ void Estimator::processMeasurements()
             std_msgs::Header header;
             header.frame_id = "world";
             header.stamp = ros::Time::now();
-
             pubOdometry(*this, header);
             pubKeyPoses(*this, header);
             pubCameraPose(*this, header);
@@ -627,7 +654,7 @@ void Estimator::processIMULeg(double t, double dt,
         il_pre_integrations[frame_count]->push_back(dt, linear_acceleration, angular_velocity, joint_angle, joint_velocity, foot_contact);
         // if(solver_flag != NON_LINEAR)
         //        tmp_pre_integration->push_back(dt, linear_acceleration, angular_velocity);
-        tmp_il_pre_integration->push_back(dt, linear_acceleration, angular_velocity, joint_angle, joint_velocity, foot_contact);
+        tmp_il_pre_integration->push_back(dt, linear_acceleration, angular_velocity, joint_angle, joint_velocity, foot_contact); // TAG 处理IMUlLEG
 
         dt_buf[frame_count].push_back(dt);
         linear_acceleration_buf[frame_count].push_back(linear_acceleration);

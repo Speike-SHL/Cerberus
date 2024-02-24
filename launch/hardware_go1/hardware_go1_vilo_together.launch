@@ -1,0 +1,6 @@
+<launch>
+    <include file="$(find vilo)/launch/hardware_go1/hardware_go1_vilo.launch" />
+
+    <include file="$(find vilo)/launch/hardware_go1/hardware_go1_vilo_rviz.launch" />
+
+</launch>

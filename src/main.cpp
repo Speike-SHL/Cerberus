@@ -92,6 +92,8 @@ cv::Mat getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg)
 // extract images with same timestamp from two topics
 int record_counter = 0;
 int record_counter_interval = 50;
+
+// 处理图像线程，匹配左右目的图像，如果匹配成功，将图像输入到estimator的图像缓冲区中，等待processMeasurements线程处理
 void sync_process()
 {
     while (1)
@@ -443,6 +445,8 @@ int main(int argc, char **argv)
 
     readParameters(config_file);
     estimator.setParameter();
+
+    estimator._riekf->creatROSTopic(&n);
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");

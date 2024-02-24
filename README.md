@@ -1,3 +1,8 @@
+## 我的更改
+
+为了测试IEKF在四足环境中的作用，更改此代码。
+使用的launch文件为 run_track_bag_vilo.launch , 其他文件由于更改, 不确保还能正常使用。
+
 ## Introduction
 This ROS package contains a visual-inertial-leg odometry (VILO) for Unitree A1 and Go1 robot. Our goal is to provide a compact and low-cost long term position sensing suite for legged robots (A sensing solution only has one IMU, one stereo camera, and leg sensors. Total cost <$1000).
 

@@ -37,6 +37,9 @@
 #include "../initial/initial_ex_rotation.h"
 
 #include "../legKinematics/A1Kinematics.h"
+#include "EstiRIEKF.h"
+
+class EstiRIEKF;
 
 class Estimator
 {
@@ -239,6 +242,8 @@ public:
     Vector3d lo_velocity_with_bias;
     Vector12d lo_velocity_with_bias_each_leg;
     Vector4d foot_contact_flag;
+
+    EstiRIEKF* _riekf;
 };
 
 #endif // VILENS_ESTIMATOR_H

@@ -3,6 +3,8 @@
 //
 
 #include "imu_leg_integration_base.h"
+#include "../estimator/modern_robotics.h"
+#include <Eigen/Dense>
 
 IMULegIntegrationBase::IMULegIntegrationBase(const Vector3d &_acc_0, const Vector3d &_gyr_0, const Ref<const Vector_dof> &_phi_0,
                                              const Ref<const Vector_dof> &_dphi_0, const Ref<const Vector_leg> &_c_0,
@@ -46,6 +48,16 @@ IMULegIntegrationBase::IMULegIntegrationBase(const Vector3d &_acc_0, const Vecto
     R_br = _R_br;
 }
 
+/**
+ * @brief 将新的数据添加到各个缓冲区
+ *
+ * @param dt 时间间隔
+ * @param acc IMU加速度
+ * @param gyr IMU角速度
+ * @param phi 关节角度
+ * @param dphi 关节角速度
+ * @param c 接触信息
+ */
 void IMULegIntegrationBase::push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr,
                                       const Ref<const Vector_dof> &phi, const Ref<const Vector_dof> &dphi, const Ref<const Vector_leg> &c)
 {
@@ -228,6 +240,12 @@ void IMULegIntegrationBase::midPointIntegration(double _dt, const Vector3d &_acc
         }
     }
 
+    cout << "=============================================================================" << endl;
+    cout << "linearized_rho: " << linearized_rho.transpose() << endl;
+    cout << "RHO_OPT_SIZE: " << RHO_OPT_SIZE << endl;
+    for (const auto &item : rho_fix_list)
+        cout << "rho_fix_list size: " << rho_fix_list.size() << " | " << item.transpose() << endl;
+
     // get velocity measurement
     for (int j = 0; j < NUM_OF_LEG; j++)
     {
@@ -238,6 +256,41 @@ void IMULegIntegrationBase::midPointIntegration(double _dt, const Vector3d &_acc
         Ji.push_back(a1_kin.jac(_phi_0.segment<3>(3 * j), linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j), rho_fix_list[j]));
         Jip1.push_back(a1_kin.jac(_phi_1.segment<3>(3 * j), linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j), rho_fix_list[j]));
 
+        // TAG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Speike ADD
+
+        cout << "a1_kin.fk：" << a1_kin.fk(_phi_1.segment<3>(3 * j), linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j), rho_fix_list[j]).transpose() << endl;
+        cout << "a1_kin.jac: \n"
+             << a1_kin.jac(_phi_1.segment<3>(3 * j), linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j), rho_fix_list[j]) << endl;
+        cout << "linearized_rho.segment " << linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j) << endl;
+        cout << "rho_fix_list[j] " << rho_fix_list[j].transpose() << endl;
+
+        Eigen::Matrix4d M;
+        double Ox = rho_fix_list[j][0];
+        double Oy = rho_fix_list[j][1];
+        double Oz = 0;
+        double d = rho_fix_list[j][2];
+        double lt = rho_fix_list[j][3];
+        double lc = linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j)[0];
+        M << 1, 0, 0, Ox,
+            0, 1, 0, Oy + d,
+            0, 0, 1, Oz - lc - lt,
+            0, 0, 0, 1;
+        Eigen::Matrix<double, 6, 1> Slist1, Slist2, Slist3;
+        Slist1.head(3) = Eigen::Vector3d(1, 0, 0);
+        Slist1.tail(3) = -Eigen::Vector3d(1, 0, 0).cross(Eigen::Vector3d(0, Oy, Oz));
+        Slist2.head(3) = Eigen::Vector3d(0, 1, 0);
+        Slist2.tail(3) = -Eigen::Vector3d(0, 1, 0).cross(Eigen::Vector3d(Ox, 0, Oz));
+        Slist3.head(3) = Eigen::Vector3d(0, 1, 0);
+        Slist3.tail(3) = -Eigen::Vector3d(0, 1, 0).cross(Eigen::Vector3d(Ox, 0, Oz - lt));
+        Eigen::Matrix<double, 6, 3> Slist;
+        Slist << Slist1, Slist2, Slist3;
+        Eigen::Matrix<double, 3, 1> thetaList(_phi_0.segment<3>(3 * j)(0), _phi_0.segment<3>(3 * j)(1), _phi_0.segment<3>(3 * j)(2));
+        Eigen::Matrix4d T = mr::FKinSpace(M, Slist, thetaList);
+        cout << "Modern Robotics: \n"
+             << T << endl;
+
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Speike ADD
+
         // calculate vm
         vi.push_back(-R_br * Ji[j] * _dphi_0.segment<3>(3 * j) - R_w_0_x * (p_br + R_br * fi[j]));
         vip1.push_back(-R_br * Jip1[j] * _dphi_1.segment<3>(3 * j) - R_w_1_x * (p_br + R_br * fip1[j]));
@@ -245,6 +298,8 @@ void IMULegIntegrationBase::midPointIntegration(double _dt, const Vector3d &_acc
         result_delta_epsilon[j] = delta_epsilon[j] + 0.5 * (delta_q * vi[j] + result_delta_q * vip1[j]) * _dt;
         result_linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j) = linearized_rho.segment<RHO_OPT_SIZE>(RHO_OPT_SIZE * j);
     }
+
+    cout << "=============================================================================" << endl;
 
     // debug: record all four lo velocities, examine their difference to average
     // only choose the most accurate two

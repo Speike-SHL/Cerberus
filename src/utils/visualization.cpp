@@ -160,13 +160,14 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         pub_path.publish(path);
 
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
-        printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
+        // NOTE 注释输出
+/*         printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
                tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z());
         printf("rho bias: %f %f %f %f  \n",
                estimator.Rho1[WINDOW_SIZE].x(),
                estimator.Rho2[WINDOW_SIZE].x(),
                estimator.Rho3[WINDOW_SIZE].x(),
-               estimator.Rho4[WINDOW_SIZE].x());
+               estimator.Rho4[WINDOW_SIZE].x()); */
     }
 }
 
